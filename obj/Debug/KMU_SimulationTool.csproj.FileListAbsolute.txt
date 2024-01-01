@@ -1,0 +1,20 @@
+C:\Users\Anahi\source\repos\KMU_SimulationTool\bin\Debug\KMU_SimulationTool.exe.config
+C:\Users\Anahi\source\repos\KMU_SimulationTool\bin\Debug\KMU_SimulationTool.exe
+C:\Users\Anahi\source\repos\KMU_SimulationTool\bin\Debug\KMU_SimulationTool.pdb
+C:\Users\Anahi\source\repos\KMU_SimulationTool\obj\Debug\KMU_SimulationTool.csprojAssemblyReference.cache
+C:\Users\Anahi\source\repos\KMU_SimulationTool\obj\Debug\KMU_SimulationTool.Form1.resources
+C:\Users\Anahi\source\repos\KMU_SimulationTool\obj\Debug\KMU_SimulationTool.Properties.Resources.resources
+C:\Users\Anahi\source\repos\KMU_SimulationTool\obj\Debug\KMU_SimulationTool.csproj.GenerateResource.cache
+C:\Users\Anahi\source\repos\KMU_SimulationTool\obj\Debug\KMU_SimulationTool.csproj.CoreCompileInputs.cache
+C:\Users\Anahi\source\repos\KMU_SimulationTool\obj\Debug\KMU_SimulationTool.exe
+C:\Users\Anahi\source\repos\KMU_SimulationTool\obj\Debug\KMU_SimulationTool.pdb
+G:\Uni\Professor Iim\Daegu\New Simualtion Tool\KMU_SimulationTool\bin\Debug\KMU_SimulationTool.exe.config
+G:\Uni\Professor Iim\Daegu\New Simualtion Tool\KMU_SimulationTool\bin\Debug\KMU_SimulationTool.exe
+G:\Uni\Professor Iim\Daegu\New Simualtion Tool\KMU_SimulationTool\bin\Debug\KMU_SimulationTool.pdb
+G:\Uni\Professor Iim\Daegu\New Simualtion Tool\KMU_SimulationTool\obj\Debug\KMU_SimulationTool.csprojAssemblyReference.cache
+G:\Uni\Professor Iim\Daegu\New Simualtion Tool\KMU_SimulationTool\obj\Debug\KMU_SimulationTool.Form1.resources
+G:\Uni\Professor Iim\Daegu\New Simualtion Tool\KMU_SimulationTool\obj\Debug\KMU_SimulationTool.Properties.Resources.resources
+G:\Uni\Professor Iim\Daegu\New Simualtion Tool\KMU_SimulationTool\obj\Debug\KMU_SimulationTool.csproj.GenerateResource.cache
+G:\Uni\Professor Iim\Daegu\New Simualtion Tool\KMU_SimulationTool\obj\Debug\KMU_SimulationTool.csproj.CoreCompileInputs.cache
+G:\Uni\Professor Iim\Daegu\New Simualtion Tool\KMU_SimulationTool\obj\Debug\KMU_SimulationTool.exe
+G:\Uni\Professor Iim\Daegu\New Simualtion Tool\KMU_SimulationTool\obj\Debug\KMU_SimulationTool.pdb

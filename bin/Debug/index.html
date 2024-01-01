@@ -1,0 +1,631 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <title>My Google Map</title>
+    <style>
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+
+
+    <!--<h1>My Google Map</h1>-->
+
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+
+    <script>
+
+        function updateSpeed(value) {
+            value_xSpeed = parseInt(value);
+            frame = parseInt(1000 / value_xSpeed);
+            //alert(frame);
+            pause();
+            playing();
+        }
+
+        //  时间轴被拖动时，响应事件
+        function setTime(value) {
+            //pause();
+            
+
+
+            time_count = parseInt(value);
+
+
+            layer_Route.forEach(
+                function (tmpRoute) {
+                    //var tmpRoute_move = tmpRoute.route_move.route;
+                    tmpRoute.route_count = parseInt(value);
+                }
+            );
+
+            //playing();
+            
+        }
+
+        function changePath(value_no, value_Route, route_info,value_busTimeCount) {
+            //미완성
+            var valueData = JSON.parse(value_Route);
+            var latlngList_Route = [];
+            var latlng_Str
+            
+            for (var i = 0; i < valueData.length; i++) {
+                latlng_Str = valueData[i].split(" ");
+                latlngList_Route.push(new google.maps.LatLng(latlng_Str[1], latlng_Str[0]));
+            }
+            
+            layer_Route.forEach(
+                function (tmpRoute) {
+                    if (tmpRoute.bus_no == parseInt(value_no)) {
+                        tmpRoute.route_draw.route.setPath(latlngList_Route);
+                        tmpRoute.route_move.route.setPath(latlngList_Route);
+
+                        if (parseInt(value_busTimeCount) == -1) {
+                            tmpRoute.route_count = 0;
+                        }
+                        else {
+                            
+                            tmpRoute.route_count = parseInt(value_busTimeCount);
+                            //alert(value_busTimeCount + ", " + tmpRoute.route_count);
+                        }
+
+                        $("#map").after(startAnimate(tmpRoute, tmpRoute.route_count));
+                        
+                        
+
+                    }
+                }
+            );
+
+        }
+
+
+        var map;                              //  地图声明
+        var layer_BusStop = [];        //  保存所有的 公交站 标记 (即： layer 概念，busstop layer)
+        var layer_Route = [];            //  保存所有的路线
+        //  数据结构为：[{ route_move：new google.maps.Polyline(), route_draw：new google.maps.Polyline(), route_count: 0, intervalForAnimation}，
+        //              { route_move：new google.maps.Polyline(), route_draw：new google.maps.Polyline(), route_count: 0, intervalForAnimation},
+        //                        ...   ]           同时运行的多台公交
+
+        //var intervalForAnimation;
+        var value_xSpeed = 1;       //  倍速值
+        var frame = 10;
+
+
+        /// 临时变量
+        var route_move;            //  绘制的路线
+        var route_draw;             //  移动的路线
+        var route_count = 0;     //  每个路线的 count
+
+        //  创建路线上的公交车
+        function createBusMarker() {
+
+            var symbolShape = {                                                                                                                                                             //  移动图标 -- 未来将改为 公交车
+                path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                strokeColor: '#0000FF',
+                strokeOpacity: 1.0,
+            };
+            return symbolShape;
+        }
+
+        function createRoute(value_no, value_Route, route_info) {
+            var tmpRoute_no = parseInt(value_no);
+            var tmpRoute_draw = { route: new google.maps.Polyline(), route_Info: "" }       //  绘制的路线
+            var tmpRoute_move = { route: new google.maps.Polyline(), route_Info: "" }      //  运动动画使用的路线
+            var valueData = JSON.parse(value_Route);                          //  解析数据
+            var latlngList_Route = [];                                            //  路径   -   数据集合
+            var latlng_Str                                                              //  临时变量
+            //  数据合并
+            for (var i = 0; i < valueData.length; i++) {
+                latlng_Str = valueData[i].split(" ");                         //  字符分割
+                latlngList_Route.push(new google.maps.LatLng(latlng_Str[1], latlng_Str[0]));
+            }
+            //  设置地图中心点
+            map.setCenter(latlngList_Route[0]);
+
+            var marker_Start = createMarker_Start(latlngList_Route[0], valueData[0]);                                                                            //  创建起点 marker
+            var marker_End = createMarker_End(latlngList_Route[latlngList_Route.length - 1], valueData[valueData.length - 1]);       //  创建终点 marker
+            var busMarker = createBusMarker();                                                                                                                  //  移动图标 -- 未来可改为 公交车图标
+
+            try {
+                // Create the polyline and add the symbol to it via the 'icons' property.
+                route_move = new google.maps.Polyline({       //  运动路线    route_move
+                    path: latlngList_Route,
+                    icons: [{
+                        icon: busMarker,
+                        offset: '0%'
+                    }],
+                    strokeColor: '#0000FF ',
+                    strokeOpacity: 0,
+                    map: map
+                });
+
+                //  Our Secondary polyline for reseting purpose
+                route_draw = new google.maps.Polyline({      //  固定路线    route_draw
+                    path: latlngList_Route,
+                    icons: [{
+                        icon: marker_Start,
+                        offset: '0%'
+                    }, {
+                        icon: marker_End,
+                        offset: '100%'
+                    }],
+                    strokeColor: '#0000FF ',
+                    strokeOpacity: 0.8,
+                    map: map
+                });
+            }
+            catch(e) {
+
+            }
+            
+
+            //  保存 绘制的路线
+            tmpRoute_draw.route = route_draw;
+            tmpRoute_draw.route_Info = route_info;
+            //  保存 运动动画使用的路线
+            tmpRoute_move.route = route_move;
+            tmpRoute_move.route_Info = route_info;
+            //  封装
+            var tmp_Route = { bus_no: 0, route_move: new google.maps.Polyline(), route_draw: new google.maps.Polyline(), route_count: 0, intervalForAnimation: 0, infoWin: new google.maps.InfoWindow(), numOfPassengers: 0 };       //  绘制的路线
+
+            tmp_Route.bus_no = tmpRoute_no;
+
+            //tmp_Route.infoWin = new google.maps.InfoWindow();
+            tmp_Route.numOfPassengers = 0;  //  初始状态下，搭乘人数为 0
+            //tmp_Route.infoWin.setContent("<p style=\"font-size:12px\">num. Of Passengers: " + tmp_Route.numOfPassengers + "</p>");     //  设置内容
+            tmp_Route.infoWin.setContent("<table><tr><td>bus no: </td> <td> " + tmp_Route.bus_no + "</td></tr> <tr><td>num. Of Passengers: </td> <td> " + tmp_Route.numOfPassengers + "</td></tr></table>");     //  设置内容
+            //tmp_Route.infoWin.open(map);
+
+            tmp_Route.route_draw = tmpRoute_draw;
+            tmp_Route.route_move = tmpRoute_move;
+            //tmp_Route.route_move.addListener('click', function () {
+            //    tmp_Route.infoWin.open(map, tmp_Route.route_move);
+            //});
+
+            tmp_Route.route_count = route_count;
+            //  保存到 route layer 中
+            layer_Route.push(tmp_Route);
+
+            //  Map boundaries
+            var bounds = new google.maps.LatLngBounds();
+            for (var i = 0; i < route_move.getPath().getLength(); i++) {
+                bounds.extend(route_move.getPath().getAt(i));
+            }
+            map.fitBounds(bounds);
+
+            $(".play").click(function () {
+                playing();
+            });
+
+            $(".pause").click(function () {
+                pause();
+            });
+
+            //$(".reset").click(function () {
+            //    tmp_Route.route_count = 0;
+            //    route_draw.setMap(map);
+            //});
+        }
+
+        //  显示公交信息窗
+        function showBusInfoWindow() {
+            layer_Route.forEach(
+                function (tmpRoute) {
+                    tmpRoute.infoWin.open(map);
+                }
+            );
+
+        }
+
+        //  关闭公交信息窗
+        function hideBusInfoWindow() {
+            layer_Route.forEach(
+                function (tmpRoute) {
+                    tmpRoute.infoWin.close(map);
+                }
+            );
+        }
+
+
+
+        function pause() {
+            clearInterval(timeBar_intervalForAnimation);
+
+            layer_Route.forEach(
+                function (tmpRoute) {
+                    clearInterval(tmpRoute.intervalForAnimation);
+                }
+            );
+        }
+
+        //  开始
+        function startAnimate(tmpRoute, count) {
+            try {
+                var tmpRoute_move = tmpRoute.route_move.route;
+                var icons = tmpRoute_move.get('icons');
+                icons[0].offset = (count / tmpRoute_move.getPath().getLength()) * 100 + '%';
+                tmpRoute_move.set('icons', icons);
+                $("#slider").slider("value", count);
+                //if (count > tmpRoute_move.getPath().getLength() - 1) {
+                //    clearInterval(tmpRoute.intervalForAnimation);
+                //};
+            }
+            catch (e) {
+
+            }
+
+        }
+
+        var time_count = 0;
+        var timeBar_intervalForAnimation;
+        // var list_IntervalForAnimation = [];
+        function playing() {
+
+            layer_Route.forEach(
+                function (tmpRoute) {
+                    var tmpRoute_move = tmpRoute.route_move.route;
+                    //  var count = tmpRoute.route_count;
+                    tmpRoute.intervalForAnimation = window.setInterval(
+                        function () {
+                            window.external.setBusTimeCount(tmpRoute.bus_no, tmpRoute.route_count);
+                            $("#map").after(startAnimate(tmpRoute, tmpRoute.route_count));
+                            tmpRoute.route_count = tmpRoute.route_count + 1;
+                            //alert("타이바 초기화 :"+tmpRoute.route_count);
+                            
+                            //window.external.SetTimeBar(tmpRoute.route_count);
+                            //if (tmpRoute.route_count + 1 < tmpRoute_move.getPath().getLength()) {
+                            var latlng = tmpRoute_move.getPath().getAt(tmpRoute.route_count);
+                            tmpRoute.infoWin.setPosition(latlng);
+                            //window.external.busLocation(latlng);
+
+                            //}
+                            //window.external.busLocation(tmpRoute_move.getPath().getAt(tmpRoute.route_count));
+                            //tmpRoute.route_count = (tmpRoute.route_count + 1) % tmpRoute_move.getPath().getLength();
+
+                        }, frame);
+                }
+            );
+
+            timeBar_intervalForAnimation = window.setInterval(
+                function () {
+
+                    window.external.SetTimeBar(time_count);
+                    time_count = time_count + 1;
+
+                }, frame);
+        }
+
+        function updateNumOfPassengersOnBus(bus_id, numOfPassanger) {
+            layer_Route.forEach(
+                function (tmpRoute) {
+                    if (tmpRoute.bus_no == bus_id) {
+                        tmpRoute.numOfPassengers = parseInt(numOfPassanger);
+                        //var contentStr = "<p style=\"font-size:12px\">num. Of Passengers: " + tmpRoute.numOfPassengers + "</p>";
+                        var contentStr = "<table><tr><td>bus no: </td> <td> " + tmpRoute.bus_no + "</td></tr><tr><td>num. Of Passengers: </td> <td><font size=\"5\" color=\"red\">" + tmpRoute.numOfPassengers + "</font></td></tr></table>";
+                        if (contentStr) {
+                            tmpRoute.infoWin.setContent(contentStr);
+                        }
+                    }
+                }
+            );
+
+
+            //var latlng = new google.maps.LatLng(lat, lng);
+
+            //infowindow2.setPosition(latlng);
+
+            //infowindow2.setContent("test ......");
+            //alert(infowindow2.getContent());
+
+
+        }
+
+
+
+        //  创建路线上的公交车
+        function createBusMarker() {
+            var symbolShape = {                                                                                                                                                             //  移动图标 -- 未来将改为 公交车
+                path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                strokeColor: '#0000FF',
+                strokeOpacity: 1.0
+            };
+            return symbolShape;
+        }
+
+        //  创建起点的 marker
+        function createMarker_Start(latlng, info) {
+            var style_start = {       //  起点样式
+                url: "http://maps.google.com/mapfiles/kml/paddle/go-lv.png",
+                anchor: new google.maps.Point(7, 7) //  偏移量
+            }
+            //  路径的起点
+            var marker = new google.maps.Marker({
+                position: latlng,
+                map: map,
+                icon: style_start
+            });
+            tmp_Str = info.split(" ");                        //   字符分割
+            var contentStr = "<p style=\"font-size:12px\">lat: " + tmp_Str[1] + "<br>   lng: " + tmp_Str[0] + "</p>";
+            addEvent_ClickMarker(marker, contentStr)      //   点的点击事件
+            return marker;
+        }
+
+        //  创建起点的 marker
+        function createMarker_End(latlng, info) {
+            var style_end = {         //  终点样式
+                url: "http://maps.google.com/mapfiles/kml/paddle/red-square-lv.png",
+                anchor: new google.maps.Point(7, 7) //  偏移量
+            }
+            //  终点
+            var marker = new google.maps.Marker({
+                position: latlng,
+                map: map,
+                icon: style_end
+            });
+            tmp_Str = info.split(" "); //   字符分割
+            contentStr = "<p style=\"font-size:12px\">lat: " + tmp_Str[1] + "<br>   lng: " + tmp_Str[0] + "</p>";
+            addEvent_ClickMarker(marker, contentStr) //   点的点击事件
+            return marker;
+        }
+
+
+        //  更改 公交站 显示的信息
+        function changeBusStopInfo(tmpBusStop, style) {
+            tmpBusStop.marker_busStop.setIcon(style);
+
+            var contentStr = "<table>"
+                + "<tr> <td> id: </td>" + "<td>" + tmpBusStop.busStop_no + "</td></tr>"
+                + " <tr> <td> name: </td>" + "<td>" + tmpBusStop.busStop_name + "</td></tr>"
+                + " <tr> <td> lat: </td>" + "<td>" + tmpBusStop.locLat + "</td></tr>"
+                + " <tr> <td> lng: </td>" + "<td>" + tmpBusStop.locLng + "</td></tr>"
+                + " <tr> <td> visited Bus id: </td>" + "<td> <font size=\"3\" color=\"red\">" + tmpBusStop.visitedBus_id + "</font></td></tr>"
+                + " <tr> <td> waiting Num: </td>" + "<td> <font size=\"3\" color=\"red\">" + tmpBusStop.waitingNum + "</font></td></tr>"
+                + "</table >"
+
+            //var contentStr = "<p style=\"font-size:12px\">id: "
+            //    + tmpBusStop.busStop_no
+            //    + "<br>name: " + tmpBusStop.busStop_name
+            //    + "<br>lat: " + tmpBusStop.locLat
+            //    + "<br>lng: " + tmpBusStop.locLng
+            //    + "</p><p style=\"font-size: 15px; color: orange\">visited Bus id: " + tmpBusStop.visitedBus_id
+            //    + "<br>waiting Num: " + tmpBusStop.waitingNum + "</p>";
+
+            if (contentStr) {
+                //alert(tmpBusStop.infoWindow);
+                tmpBusStop.infoWindow.setContent(contentStr);
+                //tmpBusStop.infoWindow = infoWindow;
+                //alert(tmpBusStop.infoWindow.content);
+            }
+        }
+
+
+
+        //  将 公交车站 更改为 初始化的状态 
+        function resetBusStopMarker_ToDefault(busStop_id) {
+            var style = {         //  样式
+                url: "http://maps.gstatic.com/mapfiles/ridefinder-images/mm_20_orange.png",
+            }
+
+            layer_BusStop.forEach(
+                function (tmpBusStop) {
+                    if (tmpBusStop.busStop_no == parseInt(busStop_id)) {
+                        //  保存数据
+                        tmpBusStop.visitedBus_id = "";
+                        tmpBusStop.waitingNum = 0;
+                        //  更改显示内容 与 图标样式
+                        changeBusStopInfo(tmpBusStop, style);
+                    }
+                }
+            );
+        }
+
+        //  将 公交站更改为 已经访问过的 公交站
+        function changeBusStopMarker_ToVisited(busStop_id, visitedBus_id, numOfWaiting) {
+            var style = {         //  样式
+                url: "http://maps.gstatic.com/mapfiles/ridefinder-images/mm_20_purple.png",
+            }
+            layer_BusStop.forEach(
+                function (tmpBusStop) {
+                    if (tmpBusStop.busStop_no == parseInt(busStop_id)) {
+                        //  保存数据
+                        //tmpBusStop.visitedBus_id = tmpBusStop.visitedBus_id + ", " + visitedBus_id;
+                        tmpBusStop.visitedBus_id = visitedBus_id;
+                        tmpBusStop.waitingNum = parseInt(numOfWaiting);
+                        //  更改显示内容 与 图标样式
+                        changeBusStopInfo(tmpBusStop, style);
+
+                    }
+                });
+        }
+
+
+
+        //  添加所有公交站 marker
+        function initMarker_AllBusStop(allBusStopList) {
+            //alert("marker");
+            var allBbusStop = JSON.parse(allBusStopList);                          //  解析数据
+            //alert(allBbusStop.length);
+            var marker_busStop;
+
+            var tmpBusStop = { busStop_no: "", busStop_name: "", locLat: "", locLng: "", visitedBus_id: "", waitingNum: 0, marker_busStop: new google.maps.Marker, infoWindow: new google.maps.InfoWindow }       // 封装公交站
+
+            allBbusStop.forEach(
+                function (tmpBusStop) {
+                    tmpBusStop.busStop_no = parseInt(tmpBusStop["busStop_id"]);
+                    tmpBusStop.busStop_name = tmpBusStop["busStop_name"];
+                    tmpBusStop.locLat = tmpBusStop["lat"];
+                    tmpBusStop.locLng = tmpBusStop["lng"];
+                    tmpBusStop.visitedBus_id = tmpBusStop["visitedBus_id"];
+                    tmpBusStop.waitingNum = parseInt(tmpBusStop["numOfWaiting"]);
+
+                    var contentStr = "<table>"
+                        + "<tr> <td> id: </td>" + "<td>" + tmpBusStop.busStop_no + "</td></tr>"
+                        + " <tr> <td> name: </td>" + "<td>" + tmpBusStop.busStop_name + "</td></tr>"
+                        + " <tr> <td> lat: </td>" + "<td>" + tmpBusStop.locLat + "</td></tr>"
+                        + " <tr> <td> lng: </td>" + "<td>" + tmpBusStop.locLng + "</td></tr>"
+                        + " <tr> <td> visited Bus id: </td>" + "<td>" + tmpBusStop.visitedBus_id + "</td></tr>"
+                        + " <tr> <td> waiting Num: </td>" + "<td>" + tmpBusStop.waitingNum + "</td></tr>"
+                        + "</table >"
+
+                    //var contentStr = "<p style=\"font-size:12px\">id: "
+                    //    + tmpBusStop.busStop_no
+                    //    + "<br>name: " + tmpBusStop.busStop_name
+                    //    + "<br>lat: " + tmpBusStop.locLat
+                    //    + "<br>lng: " + tmpBusStop.locLng
+                    //    + "<br>visited Bus id: " + tmpBusStop.visitedBus_id
+                    //    + "<br>waiting Num: " + tmpBusStop.waitingNum + "</p>";
+
+                    marker_busStop = new google.maps.Marker({
+                        position: { lat: tmpBusStop.locLat, lng: tmpBusStop.locLng },
+                        map: map,
+                        icon: "http://maps.gstatic.com/mapfiles/ridefinder-images/mm_20_orange.png",
+                    });
+
+                    if (contentStr) {
+                        tmpBusStop.infoWindow = new google.maps.InfoWindow({
+                            content: contentStr
+                        });
+                        addBusStopEvent_ClickMarker(marker_busStop, tmpBusStop.infoWindow, contentStr);
+                    }
+
+                    tmpBusStop.marker_busStop = marker_busStop;
+
+                    layer_BusStop.push(tmpBusStop);  //  将 所有的 公交站 marker 保存到数组中
+                });
+        }
+
+        //  每个  marker  的信息弹窗窗口
+        function addBusStopEvent_ClickMarker(marker, infoWindow, contentStr) {
+            marker.addListener('click', function () {
+                infoWindow.open(map, marker);
+            });
+        }
+
+
+        //  显示 所有公交站 marker
+        function showMarker_BusStop() {
+            if (layer_BusStop) {
+                for (tmp in layer_BusStop) {
+                    layer_BusStop[tmp].marker_busStop.setMap(map);
+                }
+            }
+        }
+
+        //  隐藏 所有公交站 marker
+        function hideMarker_BusStop() {
+            if (layer_BusStop) {
+                for (tmp in layer_BusStop) {
+                    layer_BusStop[tmp].marker_busStop.setMap(null);
+                }
+            }
+        }
+
+        //  每个  marker  的信息弹窗窗口
+        function addEvent_ClickMarker(marker, contentStr) {
+            var infoWindow = new google.maps.InfoWindow({
+                content: contentStr
+            });
+            marker.addListener('click', function () {
+                infoWindow.open(map, marker);
+            });
+        }
+
+
+        //  ----------------------------------------------------------------------------------------------------------------------------
+        //  添加 公交车 marker
+        function addMarker_Bus(locLat, locLng, contentStr) {
+            //  测试用 假数据
+            var marker_bus = new google.maps.Marker({
+                position: { lat: locLat, lng: locLng },
+                map: map,
+                icon: "http://maps.google.com/mapfiles/kml/pal5/icon13.png",
+            });
+
+            if (contentStr) {
+                var infoWindow = new google.maps.InfoWindow({
+                    content: contentStr
+                });
+
+                marker_bus.addListener('click', function () {
+                    infoWindow.open(map, marker_bus);
+                });
+            }
+            markers_busArray.push(marker_bus);  //  将 所有的 公交站 marker 保存到数组中
+        }
+        //  ----------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+        function initMap() {
+            createMap();            //  创建地图
+        }
+
+        //  创建地图
+        function createMap() {
+            var options = {     //  地图设置
+                zoom: 15,
+                center: {
+                    lat: 35.8591823, lng: 128.4867669
+                },
+                styles: [{
+                    featureType: 'all',
+                    stylers: [{
+                        saturation: -80
+                    }]
+                }, {
+                    featureType: 'road.arterial',
+                    elementType: 'geometry',
+                    stylers: [{
+                        hue: '#00ffee'
+                    }, {
+                        saturation: 50
+                    }]
+                }, {
+                    featureType: 'poi.business',
+                    elementType: 'labels',
+                    stylers: [{
+                        visibility: 'off'
+                    }]
+                }]
+            }
+            //  创建 map
+            map = new google.maps.Map(document.getElementById('map'), options);
+            window.map = map;   //  将map变量存储在全局
+        }
+
+    </script>
+
+
+    <script>
+        $(document).ready(function () {
+            $("#datepickerFrom").datepicker();
+        });
+    </script>
+
+
+    <div id="map"></div>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAIBbSwYnpxANQ9gyccFC7FWhIEMhaLtyM&callback=initMap"></script>
+
+</body>
+</html>
